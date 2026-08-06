@@ -1,0 +1,29 @@
+name: Auto Commit Trigger
+
+on:
+  schedule:
+    - cron: '0 12 * * *' # Runs daily at 12:00 UTC
+  workflow_dispatch:      # Allows manual trigger from GitHub UI
+
+jobs:
+  commit-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run Commit Trigger Script
+        run: python commit_trigger.py "chore: automated daily workflow commit"
+
+      - name: Push Changes
+        run: git push
