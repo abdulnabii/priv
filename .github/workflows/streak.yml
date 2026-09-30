@@ -21,7 +21,7 @@ jobs:
       - name: Configure Git Author
         run: |
           git config user.name "Abdul Nabi"
-          git config user.email "abdulnabi.khaskhely@gmail.com"
+          git config user.email "nabi44979@gmail.com"
 
       - name: Append Activity Log & Push
         run: |

@@ -31,12 +31,29 @@ def run_cmd(cmd, cwd=None, quiet=False):
             print(f"  [stderr] {result.stderr.strip()}")
     return result.returncode == 0
 
+def check_and_ensure_git_identity():
+    """Verify and ensure Git identity is properly configured before committing."""
+    name = subprocess.run("git config user.name", shell=True, text=True, capture_output=True).stdout.strip()
+    email = subprocess.run("git config user.email", shell=True, text=True, capture_output=True).stdout.strip()
+    
+    if not name:
+        name = "Abdul Nabi"
+        run_cmd(f'git config user.name "{name}"', quiet=True)
+    if not email:
+        email = "nabi44979@gmail.com"
+        run_cmd(f'git config user.email "{email}"', quiet=True)
+    
+    print(f"[INFO] Verified Git Author Identity: {name} <{email}>")
+    return name, email
+
 def sync_remote():
     """Pull remote changes to avoid non-fast-forward push rejections."""
     print("[INFO] Syncing with remote repository...")
     run_cmd(f"git pull origin {BRANCH} --no-rebase -X ours", quiet=True)
-    run_cmd(f"git add {LOG_FILE}", quiet=True)
-    run_cmd("git commit -m 'chore: sync remote'", quiet=True)
+    status = subprocess.run("git status --porcelain", shell=True, text=True, capture_output=True).stdout.strip()
+    if status:
+        run_cmd(f"git add {LOG_FILE}", quiet=True)
+        run_cmd("git commit -m 'chore: sync remote'", quiet=True)
 
 def safe_push(retries=3):
     """Attempt git push with automatic sync retry if rejected."""
@@ -58,7 +75,7 @@ def update_activity_file(index=1, total=1):
     
     print(f"[OK] ({index}/{total}) Updated {LOG_FILE}: {entry.strip()}")
 
-def execute_batch_commits(count=1, custom_msg="", push_strategy="each", delay=1.0):
+def execute_batch_commits(count=1, custom_msg="", push_strategy="end", delay=1.0):
     """
     Execute batch commits and pushes with auto-recovery logic.
     """
@@ -68,6 +85,9 @@ def execute_batch_commits(count=1, custom_msg="", push_strategy="each", delay=1.
     print(f"  Push Strategy : {push_strategy.upper()}")
     print(f"  Delay         : {delay}s between commits")
     print("=" * 55 + "\n")
+
+    # Verify Git Identity
+    check_and_ensure_git_identity()
 
     # Initial sync before starting batch
     sync_remote()
@@ -146,20 +166,20 @@ def interactive_menu():
     # 3. Ask push strategy
     if count > 1:
         print("\n👉 Choose Push Strategy:")
-        print("   [1] Push after EACH commit (triggers multiple GitHub activity points)")
-        print("   [2] Push ONCE at the end (faster execution & recommended for large batches)")
+        print("   [1] Push ONCE at the end (Recommended: Fast & avoids GitHub push rate-limiting)")
+        print("   [2] Push after EACH commit")
         print("   [3] Local commits only (Do not push)")
         choice = input("   Select option (1/2/3) [Default: 1]: ").strip()
         
         if choice == "2":
-            push_strategy = "end"
+            push_strategy = "each"
         elif choice == "3":
             push_strategy = "none"
         else:
-            push_strategy = "each"
+            push_strategy = "end"
     else:
         push_choice = input("👉 Push commit to GitHub? (y/n) [Default: y]: ").strip().lower()
-        push_strategy = "each" if push_choice in ("", "y", "yes") else "none"
+        push_strategy = "end" if push_choice in ("", "y", "yes") else "none"
 
     # 4. Ask delay
     if count > 1:
@@ -182,7 +202,7 @@ def main():
     parser = argparse.ArgumentParser(description="Automated Git Commit & Push Activity Trigger")
     parser.add_argument("-c", "--count", type=int, default=None, help="Number of commits to make")
     parser.add_argument("-m", "--message", type=str, default="", help="Custom commit message")
-    parser.add_argument("-p", "--push-strategy", choices=["each", "end", "none"], default="each", help="Push strategy")
+    parser.add_argument("-p", "--push-strategy", choices=["each", "end", "none"], default="end", help="Push strategy")
     parser.add_argument("-d", "--delay", type=float, default=1.0, help="Delay in seconds between commits")
     parser.add_argument("-i", "--interactive", action="store_true", help="Force interactive mode")
 
