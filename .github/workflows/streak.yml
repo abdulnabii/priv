@@ -1,0 +1,32 @@
+name: Daily Streak Keeper
+
+on:
+  schedule:
+    # Runs every day at 00:05 UTC (05:05 AM PKT)
+    - cron: '5 0 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  keep-streak:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git Author
+        run: |
+          git config user.name "Abdul Nabi"
+          git config user.email "abdulnabi.khaskhely@gmail.com"
+
+      - name: Append Activity Log & Push
+        run: |
+          DATE_NOW=$(date -u +"%Y-%m-%d %H:%M:%S")
+          echo "[$DATE_NOW] Automated streak keeper activity ping" >> activity_log.txt
+          git add activity_log.txt
+          git commit -m "chore: automated activity commit at $DATE_NOW [skip ci]" || echo "No changes to commit"
+          git push origin main
